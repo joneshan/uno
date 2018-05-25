@@ -1,0 +1,5 @@
+.idea/
+config.json
+*.bin
+*.log
+node_modules/

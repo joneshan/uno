@@ -1,0 +1,25 @@
+/*!
+ * Copyright 2018 acrazing <joking.young@gmail.com>
+ *
+ * @since 2018-05-24 09:06:59
+ * @version 1.0.0
+ * @desc messages.proto
+ */
+syntax = "proto3";
+package uno;
+
+message Empty {
+}
+
+message UnoMessage {
+  uint32 no = 1;
+}
+
+service Uno {
+  rpc Rent (Empty) returns (UnoMessage) {
+  }
+  rpc Relet (UnoMessage) returns (Empty) {
+  }
+  rpc Return (UnoMessage) returns (Empty) {
+  }
+}
