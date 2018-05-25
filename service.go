@@ -58,11 +58,11 @@ type Options struct {
 type Worker struct {
 	Options
 	// signal for rent a new ticket
-	RentSignal chan *rentCmd
+	rentCmd chan *rentCmd
 	// signal for relet a rent ticket
-	ReletSignal chan *reletCmd
+	reletCmd chan *reletCmd
 	// signal for return a ticket, this will not return any value
-	ReturnSignal chan uint32
+	returnCmd chan uint32
 	// the nextValue rentable value in pool
 	poolHead *poolNode
 	// the poolTail rent value in pool
@@ -99,11 +99,11 @@ func NewWorker() *Worker {
 			MinValue:   1e5,
 			MaxValue:   2e5,
 		},
-		RentSignal:   make(chan *rentCmd),
-		ReletSignal:  make(chan *reletCmd),
-		ReturnSignal: make(chan uint32),
-		nextValue:    1e5,
-		busyNodes:    map[uint32]*busyNode{},
+		rentCmd:   make(chan *rentCmd),
+		reletCmd:  make(chan *reletCmd),
+		returnCmd: make(chan uint32),
+		nextValue: 1e5,
+		busyNodes: map[uint32]*busyNode{},
 	}
 }
 
@@ -312,9 +312,9 @@ func (w *Worker) free() {
 
 // close worker
 func (w *Worker) close() {
-	close(w.RentSignal)
-	close(w.ReletSignal)
-	close(w.ReturnSignal)
+	close(w.rentCmd)
+	close(w.reletCmd)
+	close(w.returnCmd)
 	w.expireTimer.Stop()
 	w.freeTimer.Stop()
 }
@@ -351,17 +351,17 @@ func (w *Worker) Run(ctx context.Context) {
 		case <-ctx.Done():
 			w.close()
 			return
-		case cmd, ok := <-w.RentSignal:
+		case cmd, ok := <-w.rentCmd:
 			if !ok {
 				return
 			}
 			cmd.result <- w.rent()
-		case cmd, ok := <-w.ReletSignal:
+		case cmd, ok := <-w.reletCmd:
 			if !ok {
 				return
 			}
 			cmd.result <- w.relet(cmd.value)
-		case value, ok := <-w.ReturnSignal:
+		case value, ok := <-w.returnCmd:
 			if !ok {
 				return
 			}
@@ -391,16 +391,16 @@ func (w *Worker) Load(status []byte) {
 
 func (w *Worker) Rent() uint32 {
 	cmd := &rentCmd{make(chan uint32)}
-	w.RentSignal <- cmd
+	w.rentCmd <- cmd
 	return <-cmd.result
 }
 
 func (w *Worker) Relet(value uint32) bool {
 	cmd := &reletCmd{value, make(chan bool)}
-	w.ReletSignal <- cmd
+	w.reletCmd <- cmd
 	return <-cmd.result
 }
 
 func (w *Worker) Return(value uint32) {
-	w.ReturnSignal <- value
+	w.returnCmd <- value
 }
